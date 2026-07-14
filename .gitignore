@@ -1,0 +1,5 @@
+# Local configuration with secrets - never commit
+.env
+
+# PSReadLine edit history
+.history
