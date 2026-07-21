@@ -1,10 +1,36 @@
+function Get-OllamaHomePath {
+
+  [CmdletBinding()]
+  [OutputType([string])]
+  param(
+    [string]$HomePath
+  )
+
+  if ([string]::IsNullOrWhiteSpace($HomePath)) {
+    $HomePath = [Environment]::GetEnvironmentVariable('HOME', 'Process')
+  }
+
+  if ([string]::IsNullOrWhiteSpace($HomePath)) {
+    $HomePath = $HOME
+  }
+
+  if ([string]::IsNullOrWhiteSpace($HomePath)) {
+    $HomePath = [Environment]::GetFolderPath('UserProfile')
+  }
+
+  return $HomePath
+}
+
 function Get-OllamaPaths {
 
   [CmdletBinding()]
   [OutputType([pscustomobject])]
-  param()
+  param(
+    [string]$HomePath
+  )
 
-  $ConfigDir = Join-Path $HOME ".config\ollama"
+  $HomePath = Get-OllamaHomePath -HomePath $HomePath
+  $ConfigDir = Join-Path $HomePath ".config\ollama"
   $EnvFile = Join-Path $ConfigDir ".env"
   $LogDirectory = Join-Path $ConfigDir "logs"
   $CacheDirectory = Join-Path $ConfigDir "cache"
@@ -16,11 +42,11 @@ function Get-OllamaPaths {
   $ModelsDirectory = if ($env:OLLAMA_MODELS) {
     $env:OLLAMA_MODELS
   } else {
-    Join-Path $HOME ".ollama\models"
+    Join-Path $HomePath ".ollama\models"
   }
 
   [pscustomobject]@{
-    Home = $HOME
+    Home = $HomePath
     ConfigDir = $ConfigDir
     EnvFile = $EnvFile
     LogDirectory = $LogDirectory

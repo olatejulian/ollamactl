@@ -1,64 +1,66 @@
 function Write-Log {
 
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)]
-        [ValidateSet(
-            "Debug",
-            "Information",
-            "Warning",
-            "Error"
-        )]
-        [string]$Level,
+  [CmdletBinding()]
+  param(
+    [Parameter(Mandatory)]
+    [ValidateSet(
+      "Debug",
+      "Information",
+      "Warning",
+      "Error"
+    )]
+    [string]$Level,
 
-        [Parameter(Mandatory)]
-        [string]$Message
-    )
+    [Parameter(Mandatory)]
+    [string]$Message,
 
-    $Timestamp =
-        Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    [string]$HomePath
+  )
 
-    $Entry =
-        "[$Timestamp] [$Level] $Message"
+  $Timestamp =
+  Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
-    switch ($Level) {
+  $Entry =
+  "[$Timestamp] [$Level] $Message"
 
-        "Debug" {
+  switch ($Level) {
 
-            Write-Debug $Message
-        }
+    "Debug" {
 
-        "Information" {
-
-            Write-Information `
-                $Message `
-                -InformationAction Continue
-        }
-
-        "Warning" {
-
-            Write-Warning $Message
-        }
-
-        "Error" {
-
-            Write-Error $Message
-        }
+      Write-Debug $Message
     }
 
-    $Paths = Get-OllamaPaths
+    "Information" {
 
-    New-Item `
-        -ItemType Directory `
-        -Path $Paths.LogDirectory `
-        -Force |
+      Write-Information `
+        $Message `
+        -InformationAction Continue
+    }
+
+    "Warning" {
+
+      Write-Warning $Message
+    }
+
+    "Error" {
+
+      Write-Error $Message
+    }
+  }
+
+  $Paths = Get-OllamaPaths -HomePath $HomePath
+
+  New-Item `
+    -ItemType Directory `
+    -Path $Paths.LogDirectory `
+    -Force |
     Out-Null
 
-    Add-Content `
-        -Path (
-            Join-Path `
-                $Paths.LogDirectory `
-                "application.log"
-        ) `
-        -Value $Entry
+  Add-Content `
+    -Path (
+    Join-Path `
+      $Paths.LogDirectory `
+      "application.log"
+  ) `
+    -Value $Entry
 }
