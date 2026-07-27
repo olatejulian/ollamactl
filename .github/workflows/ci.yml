@@ -1,0 +1,144 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+  NUGET_XMLDOC_MODE: skip
+  NUGET_PACKAGES: ${{ github.workspace }}\.nuget\packages
+
+jobs:
+  test-and-publish:
+    name: Test and publish (Windows x64)
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET from global.json
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Install PowerShell quality tools
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
+
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module `
+            -Name Pester `
+            -RequiredVersion 5.7.1 `
+            -Repository PSGallery `
+            -Scope CurrentUser `
+            -Force `
+            -AllowClobber
+          Install-Module `
+            -Name PSScriptAnalyzer `
+            -RequiredVersion 1.25.0 `
+            -Repository PSGallery `
+            -Scope CurrentUser `
+            -Force `
+            -AllowClobber
+
+          Import-Module Pester -RequiredVersion 5.7.1 -Force
+          Import-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Force
+          "Pester $((Get-Module Pester).Version)"
+          "PSScriptAnalyzer $((Get-Module PSScriptAnalyzer).Version)"
+
+      - name: Run tests and quality gates
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          .\scripts\Test.ps1 -Configuration Release
+
+      - name: Publish and validate single-file executable
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          .\build.ps1 `
+            -Configuration Release `
+            -Runtime win-x64 `
+            -SkipTests
+
+      - name: Verify packaged artifact
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+
+          $artifactRoot = Join-Path $PWD 'artifacts\win-x64'
+          $executable = Join-Path $artifactRoot 'ollamactl.exe'
+          $checksum = Join-Path $artifactRoot 'ollamactl.exe.sha256'
+          $manifestPath = Join-Path $artifactRoot 'ollamactl.manifest.json'
+
+          foreach ($requiredFile in @($executable, $checksum, $manifestPath)) {
+            if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
+              throw "Missing packaged artifact: $requiredFile"
+            }
+          }
+
+          $zip = Get-ChildItem `
+            -LiteralPath $artifactRoot `
+            -Filter 'ollamactl-*-win-x64-singlefile.zip' `
+            -File
+          if (@($zip).Count -ne 1) {
+            throw "Expected exactly one single-file ZIP, found $(@($zip).Count)."
+          }
+
+          $expectedHash = ((Get-Content -LiteralPath $checksum) -split '\s+')[0]
+          $actualHash = (Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne $expectedHash) {
+            throw 'The packaged executable does not match its SHA-256 file.'
+          }
+
+          $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+          if ($manifest.runtime -ne 'win-x64' -or $manifest.publishMode -ne 'singlefile') {
+            throw 'The artifact manifest does not describe a win-x64 single-file build.'
+          }
+          if ($manifest.executable.sha256 -ne $actualHash) {
+            throw 'The artifact manifest SHA-256 does not match the executable.'
+          }
+
+          & $executable --version
+          & $executable --help | Out-Null
+
+      - name: Upload Windows x64 artifact
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ollamactl-win-x64
+          path: artifacts/win-x64
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
