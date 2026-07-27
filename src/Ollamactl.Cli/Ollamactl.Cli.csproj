@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ollamactl</AssemblyName>
+    <RootNamespace>Ollamactl.Cli</RootNamespace>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Description>A modern command-line interface for managing and inspecting Ollama.</Description>
+    <Product>ollamactl</Product>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Ollamactl.Application/Ollamactl.Application.csproj" />
+    <ProjectReference Include="../Ollamactl.Domain/Ollamactl.Domain.csproj" />
+    <ProjectReference Include="../Ollamactl.Infrastructure/Ollamactl.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

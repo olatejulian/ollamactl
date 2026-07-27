@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Application use cases, ports, and pure configuration rules for ollamactl.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Ollamactl.Domain/Ollamactl.Domain.csproj" />
+  </ItemGroup>
+</Project>

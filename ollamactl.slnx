@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Ollamactl.Domain/Ollamactl.Domain.csproj" />
+    <Project Path="src/Ollamactl.Application/Ollamactl.Application.csproj" />
+    <Project Path="src/Ollamactl.Infrastructure/Ollamactl.Infrastructure.csproj" />
+    <Project Path="src/Ollamactl.Cli/Ollamactl.Cli.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Ollamactl.TestKit/Ollamactl.TestKit.csproj" />
+    <Project Path="tests/Ollamactl.UnitTests/Ollamactl.UnitTests.csproj" />
+    <Project Path="tests/Ollamactl.IntegrationTests/Ollamactl.IntegrationTests.csproj" />
+    <Project Path="tests/Ollamactl.EndToEndTests/Ollamactl.EndToEndTests.csproj" />
+    <Project Path="tests/Ollamactl.ArchitectureTests/Ollamactl.ArchitectureTests.csproj" />
+  </Folder>
+</Solution>

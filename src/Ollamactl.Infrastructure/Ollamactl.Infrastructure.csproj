@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>HTTP, process, and persistence adapters for ollamactl.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Ollamactl.Application/Ollamactl.Application.csproj" />
+    <ProjectReference Include="../Ollamactl.Domain/Ollamactl.Domain.csproj" />
+  </ItemGroup>
+</Project>
