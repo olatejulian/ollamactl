@@ -51,39 +51,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
 
-function Get-ProcessEnvironmentSnapshot {
-  [CmdletBinding()]
-  param(
-    [Parameter(Mandatory)]
-    [string[]]$Name
-  )
-
-  $Snapshot = @{}
-  foreach ($VariableName in $Name) {
-    $Snapshot[$VariableName] = [Environment]::GetEnvironmentVariable(
-      $VariableName,
-      'Process'
-    )
-  }
-
-  return $Snapshot
-}
-
-function Restore-ProcessEnvironment {
-  [CmdletBinding()]
-  param(
-    [Parameter(Mandatory)]
-    [hashtable]$Snapshot
-  )
-
-  foreach ($Entry in $Snapshot.GetEnumerator()) {
-    [Environment]::SetEnvironmentVariable(
-      [string]$Entry.Key,
-      $Entry.Value,
-      'Process'
-    )
-  }
-}
+. (Join-Path $PSScriptRoot 'Common.ps1')
 
 function Assert-ChildPath {
   [CmdletBinding()]
@@ -146,17 +114,10 @@ try {
   try {
     # Keep MSBuild task hosts on the SDK/runtime selected by global.json. This
     # also repairs machines whose process environment points at an older SDK.
-    $TaskDotnetCommand = Get-Command dotnet -CommandType Application -ErrorAction Stop |
-      Select-Object -First 1
-    $TaskDotnetExecutable = $TaskDotnetCommand.Source
-    $TaskDotnetRoot = Split-Path -Parent $TaskDotnetExecutable
-    $TaskSdkVersion = (& $TaskDotnetExecutable --version | Out-String).Trim()
-    $TaskSdkDirectory = Join-Path $TaskDotnetRoot "sdk\$TaskSdkVersion"
-    $TaskSdksPath = Join-Path $TaskSdkDirectory 'Sdks'
-
-    if (-not (Test-Path -LiteralPath $TaskSdksPath -PathType Container)) {
-      throw "The selected .NET SDK directory does not exist: $TaskSdksPath"
-    }
+    $TaskDotnetEnvironment = Get-DotnetTaskEnvironment
+    $TaskDotnetExecutable = $TaskDotnetEnvironment.Executable
+    $TaskDotnetRoot = $TaskDotnetEnvironment.Root
+    $TaskSdksPath = $TaskDotnetEnvironment.SdksPath
 
     $env:DOTNET_ROOT = $TaskDotnetRoot
     $env:DOTNET_ROOT_X64 = $TaskDotnetRoot

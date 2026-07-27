@@ -44,6 +44,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
 
+. (Join-Path $PSScriptRoot 'Common.ps1')
+
 $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 $Solution = Join-Path $RepositoryRoot 'ollamactl.slnx'
 $PesterTests = Join-Path $RepositoryRoot 'tests\PowerShell'
@@ -52,23 +54,15 @@ $AnalyzerSettingsCandidates = @(
   (Join-Path $RepositoryRoot 'PSScriptAnalyzerSettings.psd1')
   (Join-Path $RepositoryRoot '.config\PSScriptAnalyzerSettings.psd1')
 )
-$DotnetEnvironmentSnapshot = @{}
-foreach ($VariableName in @('DOTNET_ROOT', 'DOTNET_ROOT_X64', 'MSBuildSDKsPath')) {
-  $DotnetEnvironmentSnapshot[$VariableName] = [Environment]::GetEnvironmentVariable(
-    $VariableName,
-    'Process'
-  )
-}
-
-$TaskDotnetCommand = Get-Command dotnet -CommandType Application -ErrorAction Stop |
-  Select-Object -First 1
-$TaskDotnetExecutable = $TaskDotnetCommand.Source
-$TaskDotnetRoot = Split-Path -Parent $TaskDotnetExecutable
-$TaskSdkVersion = (& $TaskDotnetExecutable --version | Out-String).Trim()
-$TaskSdksPath = Join-Path $TaskDotnetRoot "sdk\$TaskSdkVersion\Sdks"
-if (-not (Test-Path -LiteralPath $TaskSdksPath -PathType Container)) {
-  throw "The selected .NET SDK directory does not exist: $TaskSdksPath"
-}
+$DotnetEnvironmentSnapshot = Get-ProcessEnvironmentSnapshot -Name @(
+  'DOTNET_ROOT'
+  'DOTNET_ROOT_X64'
+  'MSBuildSDKsPath'
+)
+$TaskDotnetEnvironment = Get-DotnetTaskEnvironment
+$TaskDotnetExecutable = $TaskDotnetEnvironment.Executable
+$TaskDotnetRoot = $TaskDotnetEnvironment.Root
+$TaskSdksPath = $TaskDotnetEnvironment.SdksPath
 
 Push-Location $RepositoryRoot
 try {
@@ -147,6 +141,7 @@ try {
     # this repository.
     $AnalyzerTargets = @(
       (Join-Path $RepositoryRoot 'build.ps1')
+      (Join-Path $RepositoryRoot 'scripts\Common.ps1')
       (Join-Path $RepositoryRoot 'scripts\Build.ps1')
       (Join-Path $RepositoryRoot 'scripts\Test.ps1')
       (Join-Path $RepositoryRoot 'src\Ollamactl.PowerShell')
@@ -176,11 +171,5 @@ try {
 }
 finally {
   Pop-Location
-  foreach ($Entry in $DotnetEnvironmentSnapshot.GetEnumerator()) {
-    [Environment]::SetEnvironmentVariable(
-      [string]$Entry.Key,
-      $Entry.Value,
-      'Process'
-    )
-  }
+  Restore-ProcessEnvironment -Snapshot $DotnetEnvironmentSnapshot
 }
