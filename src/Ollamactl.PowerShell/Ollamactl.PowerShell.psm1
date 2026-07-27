@@ -1,17 +1,25 @@
-# Root module for Ollamactl.PowerShell.
-# Dot-sources Private helpers then Public cmdlets. Order matters because
-# Public cmdlets depend on Private helpers.
+Set-StrictMode -Version Latest
 
-$ModuleDir = $PSScriptRoot
+$PrivateDirectory = Join-Path -Path $PSScriptRoot -ChildPath 'Private'
+$PublicDirectory = Join-Path -Path $PSScriptRoot -ChildPath 'Public'
 
-$privateDir = Join-Path $ModuleDir "Private"
-if (Test-Path $privateDir) {
-  Get-ChildItem -Path $privateDir -Filter "*.ps1" -File |
-    ForEach-Object { . $_.FullName }
+Get-ChildItem -LiteralPath $PrivateDirectory -Filter '*.ps1' -File |
+  Sort-Object -Property Name |
+  ForEach-Object { . $_.FullName }
+
+$PublicFunctions = @(
+  'Get-OllamaEndpoint'
+  'Get-OllamaHealth'
+  'Get-OllamaModel'
+  'Get-OllamaProcess'
+  'Invoke-Ollamactl'
+  'Start-OllamaServer'
+  'Stop-OllamaServer'
+)
+
+foreach ($FunctionName in $PublicFunctions) {
+  $FunctionPath = Join-Path -Path $PublicDirectory -ChildPath "$FunctionName.ps1"
+  . $FunctionPath
 }
 
-$publicDir = Join-Path $ModuleDir "Public"
-if (Test-Path $publicDir) {
-  Get-ChildItem -Path $publicDir -Filter "*.ps1" -File |
-    ForEach-Object { . $_.FullName }
-}
+Export-ModuleMember -Function $PublicFunctions

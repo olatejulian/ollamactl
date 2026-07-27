@@ -1,12 +1,15 @@
-function Get-OllamaEndpoint {
+function Get-OllamaModel {
   <#
   .SYNOPSIS
-  Gets the endpoint and resolved ollamactl configuration.
+  Gets installed or currently running Ollama models.
 
   .DESCRIPTION
-  Calls `ollamactl endpoint --output json` and converts the JSON response into
-  a PowerShell object. Command-line values override process and file-based
-  configuration according to the ollamactl configuration rules.
+  Calls either `ollamactl model list --output json` or
+  `ollamactl model running --output json` and converts the response into
+  PowerShell objects.
+
+  .PARAMETER Running
+  Returns only models currently loaded by the Ollama server.
 
   .PARAMETER OllamaHost
   Overrides the Ollama host as host:port or an HTTP(S) URL.
@@ -22,20 +25,20 @@ function Get-OllamaEndpoint {
   then PATH are searched.
 
   .EXAMPLE
-  Get-OllamaEndpoint
+  Get-OllamaModel
 
-  Gets the endpoint using the normal configuration precedence.
+  Gets all installed models.
 
   .EXAMPLE
-  Get-OllamaEndpoint -OllamaHost 'http://127.0.0.1:11434' -TimeoutSeconds 10
+  Get-OllamaModel -Running
 
-  Gets the endpoint with command-line overrides.
+  Gets models currently loaded in memory.
 
   .OUTPUTS
   System.Management.Automation.PSObject
 
   .NOTES
-  Requires ollamactl 0.3.0 or newer.
+  The command can return zero, one, or many model objects.
 
   .LINK
   https://github.com/olatejulian/ollamactl
@@ -43,6 +46,8 @@ function Get-OllamaEndpoint {
   [CmdletBinding()]
   [OutputType([psobject])]
   param(
+    [switch]$Running,
+
     [string]$OllamaHost,
 
     [ValidateRange(1, 600)]
@@ -53,7 +58,8 @@ function Get-OllamaEndpoint {
     [string]$ExecutablePath
   )
 
-  $Parameters = @{ Command = @('endpoint') }
+  $Subcommand = if ($Running) { 'running' } else { 'list' }
+  $Parameters = @{ Command = @('model', $Subcommand) }
   foreach ($Name in 'OllamaHost', 'TimeoutSeconds', 'ConfigDirectory') {
     if ($PSBoundParameters.ContainsKey($Name)) {
       $Parameters[$Name] = $PSBoundParameters[$Name]
